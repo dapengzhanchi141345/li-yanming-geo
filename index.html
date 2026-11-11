@@ -229,6 +229,9 @@ footer .watermark { margin-top: 8px; font-size: 0.95em; letter-spacing: 1px; opa
   .kmap { grid-template-columns: 1fr; }
   .clim-card { grid-template-columns: 1fr; }
   .clim-card canvas { width: 100%; height: auto; }
+  .iso-canvas-wrap canvas { width: 100%; height: auto; }
+  .iso-side { min-width: 0; }
+  #map-canvas { width: 100%; height: auto; }
 }
 </style>
 </head>
@@ -275,8 +278,11 @@ footer .watermark { margin-top: 8px; font-size: 0.95em; letter-spacing: 1px; opa
       <span>时</span>
       <button onclick="calcTZ()">计算 B 地时刻</button>
     </div>
+    <div class="tz-form">
+      <label style="font-weight:600;margin-right:4px;width:auto;margin-bottom:0;cursor:pointer;"><input id="tz-dl" type="checkbox" style="width:auto;margin:0 6px 0 0;">跨日界线（A、B 一东一西时，看 ±1 天规则）</label>
+    </div>
     <div class="result-box" id="tz-result"></div>
-    <div class="tz-note">📌 规则：B 地时刻 = A 地时刻 + (B 区时数 − A 区时数)。结果超过 24 小时则日期 +1 天；为负数则日期 −1 天。</div>
+    <div class="tz-note">📌 规则：B 地时刻 = A 地时刻 + (B 区时数 − A 区时数)。结果超过 24 小时则日期 +1 天；为负数则日期 −1 天。跨日界线口诀：向东越线减一天、向西越线加一天（勾选「跨日界线」看判定）。</div>
   </div>
 </div>
 
@@ -396,6 +402,14 @@ footer .watermark { margin-top: 8px; font-size: 0.95em; letter-spacing: 1px; opa
 <div style="background:#fffbe6;border-left:4px solid #f5a623;padding:10px;margin:12px 0;font-size:14px">📅 2026-10-26 升级 · 【资源+2026-10-26】我国耕地"南稻北麦"分界线≈秦岭-淮河；水资源南多北少</div>
 
 <div style="background:#fffbe6;border-left:4px solid #f5a623;padding:10px;margin:12px 0;font-size:14px">📅 2026-10-27 升级 · 【交通+2026-10-27】交通运输布局变化推动聚落空间形态：公路时代沿公路延伸</div>
+
+<div style="background:#fffbe6;border-left:4px solid #f5a623;padding:10px;margin:12px 0;font-size:14px">📅 2026-11-02 升级 · 【农业+2026-11-02】商品谷物农业(美国大农场) vs 季风水田农业(亚洲水稻)，规模化不同</div>
+
+<div style="background:#fffbe6;border-left:4px solid #f5a623;padding:10px;margin:12px 0;font-size:14px">📅 2026-11-03 升级 · 【时区+2026-11-03】地方时计算：经度差 15°=1 小时；东加西减</div>
+
+<div style="background:#fffbe6;border-left:4px solid #f5a623;padding:10px;margin:12px 0;font-size:14px">📅 2026-11-06 升级 · 【气候+2026-11-06】热带雨林气候全年高温多雨(亚马孙/刚果/东南亚)；草原气候干湿季分明</div>
+
+<div style="background:#fffbe6;border-left:4px solid #f5a623;padding:10px;margin:12px 0;font-size:14px">📅 2026-11-12 升级 · 【地质+2026-11-12】喀斯特：石灰岩溶蚀成溶洞/地下河/石笋，集中云贵高原</div>
 </footer>
 <script>
 /* ============ 公共：Tab 切换 ============ */
@@ -458,10 +472,16 @@ function calcTZ(){
   var total = hh * 60 + mm + diff * 60;
   var dayShift = 0;
   if (total >= 24*60) { dayShift = Math.floor(total / (24*60)); total -= dayShift * 24*60; dateNote = '（' + (dayShift>0?'+':'') + dayShift + ' 天）'; }
-  if (total < 0) { total += 24*60; dateNote = '（−1 天）'; }
+  if (total < 0) { total += 24*60; dayShift = -1; dateNote = '（−1 天）'; }
   hh = Math.floor(total/60); mm = total%60;
-  showResult(box, 'B 地区时：' + pad(hh) + ':' + pad(mm) + dateNote + '\n算式：' + tm + ' + (' + b + ' − (' + a + ')) × 1h = ' + pad(hh)+':'+pad(mm) + dateNote +
-    '\n📌 ' + (b>a ? 'B 地在 A 地偏东，时刻比 A 地晚' : b<a ? 'B 地在 A 地偏西，时刻比 A 地早' : '两地同一时区') + '；东加西减。');
+  var out = 'B 地区时：' + pad(hh) + ':' + pad(mm) + dateNote + '\n算式：' + tm + ' + (' + b + ' − (' + a + ')) × 1h = ' + pad(hh)+':'+pad(mm) + dateNote +
+    '\n📌 ' + (b>a ? 'B 地在 A 地偏东，时刻比 A 地早（数值更大）' : b<a ? 'B 地在 A 地偏西，时刻比 A 地晚（数值更小）' : '两地同一时区') + '；东加西减。';
+  if (document.getElementById('tz-dl').checked) {
+    if (diff > 12) out += '\n🌐 日界线核对：A（西时区/0 时区）→ B（东时区），向西越线「加一天」：' + (dayShift > 0 ? '本次算式超 24h，B 地日期 = A 地日期 +1 天 ✓' : '本次时刻未跨午夜，B 地日期与 A 地相同，日期无需 ±1 天。');
+    else if (diff < -12) out += '\n🌐 日界线核对：A（东时区）→ B（西时区），向东越线「减一天」：' + (dayShift < 0 ? '本次算式为负，B 地日期 = A 地日期 −1 天 ✓' : '本次时刻未跨午夜，B 地日期与 A 地相同，日期无需 ±1 天。');
+    else out += '\n🌐 日界线核对：时区差 ' + Math.abs(diff) + 'h，A、B 未跨国际日界线（180°），日期只看时刻是否越过 24h/0 点。';
+  }
+  showResult(box, out);
 }
 function pad(n){ return n<10 ? '0'+n : ''+n; }
 function showResult(el, txt){ el.textContent = txt; el.classList.add('show'); }
@@ -473,13 +493,16 @@ var ISO_SETS = [
     points: [
       { t: "① 处等压线闭合、数值中间低四周高，为低压中心，多阴雨天气", a: "① 为低压中心，近地面气旋，盛行上升气流，多阴雨" },
       { t: "② 处等压线密集，水平气压梯度力大，风力强", a: "② 等压线越密，气压梯度力越大，风力越强（判读口诀：密强疏弱）" },
-      { t: "③ 处位于高压脊（等压线向低值凸出），天气晴朗", a: "③ 等压线向低压方向凸出为高压脊，脊线处盛行下沉气流，多晴天" }
+      { t: "③ 处位于高压脊（等压线向低值凸出），天气晴朗", a: "③ 等压线向低压方向凸出为高压脊，脊线处盛行下沉气流，多晴天" },
+      { t: "④ 闭合区 ①③：① 中心值低于四周为低压中心，③ 中心值高于四周为高压中心", a: "闭合中心判读：中心值低于四周=低压中心（气旋，上升气流，多阴雨）；中心值高于四周=高压中心（反气旋，下沉气流，多晴朗）" }
     ],
     opts: [
       { label: "① 为高压中心，盛行下沉气流", ok: false },
       { label: "② 处风力强（等压线密集）", ok: true },
       { label: "③ 位于低压槽，多阴雨", ok: false },
-      { label: "等值距为 4 hPa", ok: true }
+      { label: "等值距为 4 hPa", ok: true },
+      { label: "闭合中心判读：① 中心值低于四周为低压中心（气旋、多阴雨），③ 中心值高于四周为高压中心（反气旋、多晴朗）", ok: true },
+      { label: "③ 处为低压中心，盛行上升气流，多阴雨", ok: false }
     ]
   },
   {
@@ -609,7 +632,13 @@ var CLIM = [
     opts: ['热带季风气候','热带草原气候','热带雨林气候','亚热带季风气候'] },
   { name: '新加坡（热带雨林气候）', t:[27,28,29,30,31,31,30,30,29,29,28,27], p:[240,220,210,180,170,150,130,140,170,190,220,250], ans: '热带雨林气候',
     why: '全年高温（月均温 27℃ 以上）、全年多雨（月降水 130~250mm、无旱季）→ 热带雨林气候（赤道附近，受赤道低压带控制，全年太阳辐射强、对流旺盛）。',
-    opts: ['热带雨林气候','热带季风气候','热带草原气候','亚热带季风气候'] }
+    opts: ['热带雨林气候','热带季风气候','热带草原气候','亚热带季风气候'] },
+  { name: '上海（亚热带季风气候）', t:[5,6,9,14,18,24,29,29,25,19,13,7], p:[60,65,95,100,110,180,150,120,90,70,55,40], ans: '亚热带季风气候',
+    why: '最冷月 5℃（0~15℃）→ 亚热带；最热月 29℃；降水集中在夏季（6~7 月 180/150mm）、冬季偏少（40~60mm），雨热同期 → 亚热带季风气候（亚欧大陆东岸 25°~35°N，受季风环流控制）。',
+    opts: ['亚热带季风气候','温带季风气候','温带海洋性气候','地中海气候'] },
+  { name: '乌鲁木齐（温带大陆性气候）', t:[-15,-10,0,10,18,23,25,24,18,10,0,-12], p:[15,10,12,15,18,25,30,28,20,18,15,15], ans: '温带大陆性气候',
+    why: '最冷月 −15℃（<0℃ 且深冬严寒）、最热月 25℃，年温差约 40℃；年降水仅约 220mm 且集中在夏季 → 深居内陆、距海远、水汽少 → 温带大陆性气候（亚洲内陆分布最广的气候类型）。',
+    opts: ['温带大陆性气候','温带季风气候','亚热带季风气候','温带海洋性气候'] }
 ];
 var climCur = 0;
 function drawClim(rand){
@@ -636,12 +665,14 @@ function drawClim(rand){
     ctx.fillStyle = '#546e7a';
     ctx.fillText(m+1, x+barW/2-3, H-pad+11);
   }
-  // 温度折线
+  // 温度折线（按本站最低/最高气温自适应标尺，带 2℃ 余量）
+  var cTmin = Math.min.apply(null, c.t), cTmax = Math.max.apply(null, c.t);
+  var cTlo = cTmin - 2, cTrange = (cTmax + 2) - cTlo;
   ctx.strokeStyle = '#e07856'; ctx.lineWidth = 2;
   ctx.beginPath();
   for (var m2=0;m2<12;m2++){
     var x2 = pad + step*m2 + step/2;
-    var y2 = H-pad - (H-pad*2) * ((c.t[m2]+5) / 40);
+    var y2 = H-pad - (H-pad*2) * ((c.t[m2]-cTlo) / cTrange);
     if (m2===0) ctx.moveTo(x2,y2); else ctx.lineTo(x2,y2);
   }
   ctx.stroke();
@@ -649,7 +680,7 @@ function drawClim(rand){
   ctx.fillStyle = '#e07856';
   for (var m3=0;m3<12;m3++){
     var x3 = pad + step*m3 + step/2;
-    var y3 = H-pad - (H-pad*2) * ((c.t[m3]+5)/40);
+    var y3 = H-pad - (H-pad*2) * ((c.t[m3]-cTlo)/cTrange);
     ctx.beginPath(); ctx.arc(x3,y3,3,0,Math.PI*2); ctx.fill();
   }
   ctx.font='10px sans-serif'; ctx.fillStyle='#e07856';
@@ -742,7 +773,9 @@ function drawMap(){
 function mapClick(e){
   var cv = document.getElementById('map-canvas');
   var rect = cv.getBoundingClientRect();
-  var x = e.clientX - rect.left, y = e.clientY - rect.top;
+  // CSS 像素 → canvas 内部像素换算（移动端 width:100% 缩放后仍可点中区域）
+  var x = (e.clientX - rect.left) * (cv.width / rect.width);
+  var y = (e.clientY - rect.top) * (cv.height / rect.height);
   if (!mapSel) {
     document.getElementById('map-info').innerHTML = '<div style="color:#e07856;">⚠️ 请先点击色块选择颜色</div>';
     document.getElementById('map-info').classList.add('show');
@@ -838,26 +871,42 @@ loadNextQuiz();
 </script>
 
 <div id="agent-panel" style="margin:20px auto;max-width:720px;border:2px solid #4a90d9;border-radius:12px;padding:16px;background:#f7fbff;font-family:system-ui">
-  <h3 style="margin:0 0 8px;color:#2c5d8f">🤖 山海客·地理专家团 · 智能体问答</h3>
-  <p style="font-size:13px;color:#555;margin:0 0 10px">点预设或直接输入问题，调用 山海客·地理专家团 的学科能力实时解答（在线时）。离线时显示"在线 AI 暂不可用，看站内题库"。</p>
+  <h3 style="margin:0 0 8px;color:#2c5d8f">🤖 山海客·地理专家团 · 智能体问答（本地题库模式）</h3>
+  <p style="font-size:13px;color:#555;margin:0 0 10px">本地题库模式（离线·零外链）：关键词匹配本站本地题库作答。在线 AI 问答待李老师定 key 策略后统一开通。</p>
   <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"><button style="padding:6px 10px;border-radius:8px;border:1px solid #888;background:#fff;color:#333;cursor:pointer;font-size:12px" onclick="agentAsk('等压线判读气旋/反气旋')">等压线判读气旋/反气旋</button><button style="padding:6px 10px;border-radius:8px;border:1px solid #888;background:#fff;color:#333;cursor:pointer;font-size:12px" onclick="agentAsk('经度差 1° 时间差 4 分钟计算')">经度差 1° 时间差 4 分钟计算</button><button style="padding:6px 10px;border-radius:8px;border:1px solid #888;background:#fff;color:#333;cursor:pointer;font-size:12px" onclick="agentAsk('区域地理定位题')">区域地理定位题</button>
     <button style="padding:6px 12px;border-radius:8px;border:1px solid #4a90d9;background:#4a90d9;color:#fff;cursor:pointer" onclick="agentAsk('')">问 山海客·地理专家团</button>
   </div>
-  <textarea id="agent-q" placeholder="输入问题，点按钮问 山海客·地理专家团..." style="width:100%;height:60px;padding:8px;border:1px solid #ccc;border-radius:8px;font-size:14px"></textarea>
-  <button style="margin-top:8px;padding:8px 16px;border-radius:8px;border:none;background:#2c8a3d;color:#fff;cursor:pointer;font-size:14px" onclick="agentAsk(document.getElementById('agent-q').value)">提问</button>
+  <textarea id="agent-q" placeholder="输入问题，匹配 山海客·地理专家团 本地题库..." style="width:100%;height:60px;padding:8px;border:1px solid #ccc;border-radius:8px;font-size:14px;box-sizing:border-box"></textarea>
+  <button style="margin-top:8px;padding:8px 16px;border-radius:8px;border:none;background:#2c8a3d;color:#fff;cursor:pointer;font-size:14px" onclick="agentAsk(document.getElementById('agent-q').value)">匹配本地题库</button>
   <div id="agent-a" style="margin-top:12px;padding:12px;background:#fff;border-left:4px solid #2c8a3d;border-radius:6px;font-size:14px;min-height:40px;white-space:pre-wrap;color:#333">（等待回答）</div>
   <script>
-  var AGENT_API = {{base:"https://api.agnes-k2.com/v1", key:"", model:"agnes-flash"}};
-  function agentAsk(q){{
-    if(!q) q=document.getElementById('agent-q').value;
-    if(!q){{document.getElementById('agent-a').textContent='请输入问题';return;}}
-    var a=document.getElementById('agent-a'); a.textContent='\u23F3 山海客·地理专家团 思考中...';
-    fetch(AGENT_API.base+'/chat/completions',{{method:'POST',headers:{{'Content-Type':'application/json','Authorization':'Bearer '+AGENT_API.key}},
-      body:JSON.stringify({{model:AGENT_API.model,messages:[{{role:'system',content:'你是山海客·地理专家团，全学段地理含区域地理。回答要专业、准确、可核查，口语化带大白话。'}},{{role:'user',content:q}}],temperature:0.3}})
-    .then(function(r){{return r.json();}}).then(function(d){{
-      a.textContent=(d.choices&&d.choices[0]&&d.choices[0].message)?d.choices[0].message.content:'（无返回）';
-    }}).catch(function(e){{a.textContent='\u26A0 在线 AI 暂不可用('+e.message+')，看站内题库或稍后再试。';}});
-  }}
+  // 本地题库模式: 离线·零外链·无 key。在线(key 注入)待李老师定 key 策略后统一切, 此处 AGENT_MODE 为切换点。
+  var AGENT_MODE="local";
+  var AGENT_KB=(typeof window.AGENT_KB==="object"&&window.AGENT_KB)?window.AGENT_KB:[];
+  var LOCAL_TIPS=["定位先看经纬度/海岸线/河流; 气候看气温降水年分布图对比。", "工业区位列'原料-市场-劳力-交通-政策'再排权重。"];
+  function _kbTokens(q){
+    var t=[];
+    (q.toLowerCase().match(/[a-z0-9]+/g)||[]).forEach(function(x){t.push(x);});
+    q.replace(/[^\u4e00-\u9fff]/g,'').split('').forEach(function(c){t.push(c);});
+    return t;
+  }
+  function agentAsk(q){
+    if(!q)q=document.getElementById('agent-q').value;
+    if(!q){document.getElementById('agent-a').textContent='请输入问题';return;}
+    document.getElementById('agent-q').value=q;
+    var a=document.getElementById('agent-a');
+    var uniq=Array.from(new Set(_kbTokens(q)));
+    var hits=AGENT_KB.map(function(it){
+      var hay=((it.q||"")+" "+(it.a||"")).toLowerCase();
+      var n=uniq.filter(function(t){return hay.indexOf(t)>-1;}).length;
+      return {s:n,it:it};
+    }).filter(function(x){return x.s>=Math.min(uniq.length,2);}).sort(function(x,y){return y.s-x.s;}).slice(0,3);
+    if(hits.length){
+      a.textContent="\u{1F4D6} 本地题库 · 离线（山海客·地理专家团 本地条目）\n\n"+hits.map(function(h){return "Q: "+h.it.q+"\nA: "+h.it.a;}).join("\n\n")+"\n\n（在线 AI 问答待李老师定 key 策略后开通）";
+    } else {
+      a.textContent="\u26A0\uFE0F 本地题库模式（离线）：未匹配到本地条目。在线 AI 问答待李老师定 key 策略后开通。\n学习提示：\n- "+LOCAL_TIPS.join("\n- ")+"\n并见站内【题库/知识】模块。";
+    }
+  }
   </script>
 </div>
 </body>
